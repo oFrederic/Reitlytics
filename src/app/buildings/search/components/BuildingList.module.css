@@ -1,0 +1,30 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background-color: white;
+}
+
+.listContainer {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.listContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.listContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.listContainer::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.listContainer::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+} 

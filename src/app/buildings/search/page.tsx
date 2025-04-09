@@ -6,15 +6,23 @@ import { IoLocationOutline } from 'react-icons/io5';
 import { IoStatsChartOutline } from 'react-icons/io5';
 import { IoChevronBack } from 'react-icons/io5';
 import SearchForm, { SearchFilters } from './components/SearchForm';
+import BuildingList from './components/BuildingList';
+import { BuildingData } from './components/BuildingCard';
+import { mockBuildings } from './mockData';
 
 export default function BuildingSearchPage() {
   const [activeView, setActiveView] = useState('map'); // 'map' or 'analysis'
-  const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null);
+  const [selectedBuilding, setSelectedBuilding] = useState<BuildingData | null>(null);
 
   const handleSearch = (filters: SearchFilters) => {
     console.log('Search filters:', filters);
-    setSearchFilters(filters);
-    // Here you would typically call an API or update the building list
+    // Here you would typically call an API or update the building list based on filters
+  };
+
+  const handleSelectBuilding = (building: BuildingData) => {
+    console.log('Selected building:', building);
+    setSelectedBuilding(building);
+    // Here you would typically update the map or visualization
   };
 
   return (
@@ -29,7 +37,7 @@ export default function BuildingSearchPage() {
         </div>
         
         <div className={styles.headerCenter}>
-          <span className={styles.locationCount}>選択中 55/55 件</span>
+          <span className={styles.locationCount}>選択中 {selectedBuilding ? '1' : '0'}/{mockBuildings.length} 件</span>
         </div>
         
         <div className={styles.headerRight}>
@@ -61,14 +69,10 @@ export default function BuildingSearchPage() {
         
         {/* Building List - 25% */}
         <div className={styles.buildingListContainer}>
-          <h2>Building List (Placeholder)</h2>
-          <p>This will show the list of buildings</p>
-          {searchFilters && (
-            <div className={styles.activeFilters}>
-              <h3>Active Filters:</h3>
-              <pre>{JSON.stringify(searchFilters, null, 2)}</pre>
-            </div>
-          )}
+          <BuildingList 
+            buildings={mockBuildings} 
+            onSelectBuilding={handleSelectBuilding} 
+          />
         </div>
         
         {/* Map/Graph View - 50% */}
@@ -76,7 +80,14 @@ export default function BuildingSearchPage() {
           {activeView === 'map' ? (
             <div>
               <h2>Map View</h2>
-              <p>This is the map view placeholder. It will show buildings on a map.</p>
+              {selectedBuilding && (
+                <div className={styles.selectedBuildingInfo}>
+                  <h3>Selected Building</h3>
+                  <p>{selectedBuilding.name}</p>
+                  <p>{selectedBuilding.type}</p>
+                  <p>評価額: {selectedBuilding.evaluationAmount}億円</p>
+                </div>
+              )}
               <div style={{ height: '300px', backgroundColor: '#d1e4fc', display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '8px' }}>
                 🗺️ Map Placeholder
               </div>
@@ -84,7 +95,14 @@ export default function BuildingSearchPage() {
           ) : (
             <div>
               <h2>Analysis View</h2>
-              <p>This is the analysis view placeholder. It will show charts and data visualization.</p>
+              {selectedBuilding && (
+                <div className={styles.selectedBuildingInfo}>
+                  <h3>Selected Building Analytics</h3>
+                  <p>{selectedBuilding.name}</p>
+                  <p>Cap Rate: {selectedBuilding.capRate}%</p>
+                  <p>Occupancy: {selectedBuilding.occupancyRate}%</p>
+                </div>
+              )}
               <div style={{ height: '300px', backgroundColor: '#e4fcdf', display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '8px' }}>
                 📊 Analysis Placeholder
               </div>
