@@ -5,9 +5,17 @@ import styles from './search.module.css';
 import { IoLocationOutline } from 'react-icons/io5';
 import { IoStatsChartOutline } from 'react-icons/io5';
 import { IoChevronBack } from 'react-icons/io5';
+import SearchForm, { SearchFilters } from './components/SearchForm';
 
 export default function BuildingSearchPage() {
   const [activeView, setActiveView] = useState('map'); // 'map' or 'analysis'
+  const [searchFilters, setSearchFilters] = useState<SearchFilters | null>(null);
+
+  const handleSearch = (filters: SearchFilters) => {
+    console.log('Search filters:', filters);
+    setSearchFilters(filters);
+    // Here you would typically call an API or update the building list
+  };
 
   return (
     <div className={styles.pageContainer}>
@@ -48,14 +56,19 @@ export default function BuildingSearchPage() {
       <div className={styles.contentContainer}>
         {/* Search Form - 25% */}
         <div className={styles.searchFormContainer}>
-          <h2>Search Form (Placeholder)</h2>
-          <p>This will contain the search filters</p>
+          <SearchForm onSearch={handleSearch} />
         </div>
         
         {/* Building List - 25% */}
         <div className={styles.buildingListContainer}>
           <h2>Building List (Placeholder)</h2>
           <p>This will show the list of buildings</p>
+          {searchFilters && (
+            <div className={styles.activeFilters}>
+              <h3>Active Filters:</h3>
+              <pre>{JSON.stringify(searchFilters, null, 2)}</pre>
+            </div>
+          )}
         </div>
         
         {/* Map/Graph View - 50% */}
