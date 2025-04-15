@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './search.module.css';
 import { IoLocationOutline } from 'react-icons/io5';
 import { IoStatsChartOutline } from 'react-icons/io5';
@@ -8,21 +8,56 @@ import { IoChevronBack } from 'react-icons/io5';
 import SearchForm, { SearchFilters } from './components/SearchForm';
 import BuildingList from './components/BuildingList';
 import { BuildingData } from './components/BuildingCard';
-import { mockBuildings } from './mockData';
+import MapComponent from '@/components/Map/MapComponent';
+import { useAppDispatch, useAppSelector } from '@/redux/store';
+import { fetchBuildings, searchBuildings, setSelectedBuilding } from '@/redux/slices/buildingsSlice';
+import { mapToBuildings, mapToBuilding } from './utils/buildingMapper';
 
 export default function BuildingSearchPage() {
+  const dispatch = useAppDispatch();
+  const { filteredBuildings, selectedBuilding, loading, error } = useAppSelector(state => state.buildings);
   const [activeView, setActiveView] = useState('map'); // 'map' or 'analysis'
-  const [selectedBuilding, setSelectedBuilding] = useState<BuildingData | null>(null);
+  const [uiBuildings, setUiBuildings] = useState<BuildingData[]>([]);
+  const [selectedUiBuilding, setSelectedUiBuilding] = useState<BuildingData | null>(null);
 
+  // Fetch buildings on component mount
+  useEffect(() => {
+    dispatch(fetchBuildings());
+  }, [dispatch]);
+
+  // Transform JReitBuilding to BuildingData when filtered buildings change
+  useEffect(() => {
+    if (filteredBuildings.length > 0) {
+      setUiBuildings(mapToBuildings(filteredBuildings));
+    } else {
+      setUiBuildings([]);
+    }
+  }, [filteredBuildings]);
+
+  // Handle selecting a building
+  useEffect(() => {
+    if (selectedBuilding) {
+      setSelectedUiBuilding(mapToBuilding(selectedBuilding));
+    } else {
+      setSelectedUiBuilding(null);
+    }
+  }, [selectedBuilding]);
+
+  // Handle form search
   const handleSearch = (filters: SearchFilters) => {
-    console.log('Search filters:', filters);
-    // Here you would typically call an API or update the building list based on filters
+    dispatch(searchBuildings(filters));
   };
 
+  // Handle building selection
   const handleSelectBuilding = (building: BuildingData) => {
-    console.log('Selected building:', building);
-    setSelectedBuilding(building);
-    // Here you would typically update the map or visualization
+    // Find the corresponding JReitBuilding in the Redux store
+    const selectedJReitBuilding = filteredBuildings.find(b => b.id === building.id) || null;
+    
+    // Update the selected building in Redux
+    dispatch(setSelectedBuilding(selectedJReitBuilding));
+    
+    // Update local state for UI
+    setSelectedUiBuilding(building);
   };
 
   return (
@@ -37,7 +72,10 @@ export default function BuildingSearchPage() {
         </div>
         
         <div className={styles.headerCenter}>
-          <span className={styles.locationCount}>選択中 {selectedBuilding ? '1' : '0'}/{mockBuildings.length} 件</span>
+          <span className={styles.locationCount}>
+            選択中 {selectedUiBuilding ? '1' : '0'}/{uiBuildings.length} 件
+            {loading && ' (読み込み中...)'}
+          </span>
         </div>
         
         <div className={styles.headerRight}>
@@ -69,42 +107,51 @@ export default function BuildingSearchPage() {
         
         {/* Building List - 25% */}
         <div className={styles.buildingListContainer}>
-          <BuildingList 
-            buildings={mockBuildings} 
-            onSelectBuilding={handleSelectBuilding} 
-          />
+          {error ? (
+            <div className="p-4 text-red-500">エラーが発生しました: {error}</div>
+          ) : (
+            <BuildingList 
+              buildings={uiBuildings} 
+              onSelectBuilding={handleSelectBuilding} 
+            />
+          )}
         </div>
         
         {/* Map/Graph View - 50% */}
         <div className={styles.mapGraphContainer}>
           {activeView === 'map' ? (
-            <div>
-              <h2>Map View</h2>
-              {selectedBuilding && (
+            <div className="h-full">
+              <h2 className="text-lg font-semibold mb-2">地図表示</h2>
+              {selectedUiBuilding && (
                 <div className={styles.selectedBuildingInfo}>
-                  <h3>Selected Building</h3>
-                  <p>{selectedBuilding.name}</p>
-                  <p>{selectedBuilding.type}</p>
-                  <p>評価額: {selectedBuilding.evaluationAmount}億円</p>
+                  <h3 className="font-medium">選択された建物</h3>
+                  <p>{selectedUiBuilding.name}</p>
+                  <p>{selectedUiBuilding.type}</p>
+                  <p>評価額: {selectedUiBuilding.evaluationAmount}億円</p>
                 </div>
               )}
-              <div style={{ height: '300px', backgroundColor: '#d1e4fc', display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '8px' }}>
-                🗺️ Map Placeholder
+              <div className="h-[calc(100%-80px)] rounded-lg overflow-hidden">
+                <MapComponent 
+                  buildings={filteredBuildings}
+                  onBuildingClick={(building) => {
+                    dispatch(setSelectedBuilding(building));
+                  }}
+                />
               </div>
             </div>
           ) : (
             <div>
-              <h2>Analysis View</h2>
-              {selectedBuilding && (
+              <h2 className="text-lg font-semibold mb-2">分析表示</h2>
+              {selectedUiBuilding && (
                 <div className={styles.selectedBuildingInfo}>
-                  <h3>Selected Building Analytics</h3>
-                  <p>{selectedBuilding.name}</p>
-                  <p>Cap Rate: {selectedBuilding.capRate}%</p>
-                  <p>Occupancy: {selectedBuilding.occupancyRate}%</p>
+                  <h3 className="font-medium">選択された建物の分析</h3>
+                  <p>{selectedUiBuilding.name}</p>
+                  <p>Cap Rate: {selectedUiBuilding.capRate}%</p>
+                  <p>稼働率: {selectedUiBuilding.occupancyRate}%</p>
                 </div>
               )}
-              <div style={{ height: '300px', backgroundColor: '#e4fcdf', display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '8px' }}>
-                📊 Analysis Placeholder
+              <div className="h-[300px] bg-green-50 flex justify-center items-center rounded-lg">
+                📊 分析グラフ（準備中）
               </div>
             </div>
           )}

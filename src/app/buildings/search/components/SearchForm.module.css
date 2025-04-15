@@ -121,4 +121,9 @@
 
 .searchButton:hover {
   background-color: #8ca4ff;
+}
+
+.inputError {
+  border: 1px solid #e11d48 !important;
+  background-color: rgba(254, 226, 226, 0.3) !important;
 } 

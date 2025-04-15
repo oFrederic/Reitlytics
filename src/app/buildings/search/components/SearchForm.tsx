@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './SearchForm.module.css';
+import { useAppSelector, useAppDispatch } from '@/redux/store';
+import { searchBuildings, clearSearchFilters, BuildingSearchParams } from '@/redux/slices/buildingsSlice';
 
 interface SearchFormProps {
   onSearch: (filters: SearchFilters) => void;
@@ -16,7 +18,18 @@ export interface SearchFilters {
   maxCap: string;
 }
 
+/**
+ * Validate that a string contains a valid number
+ */
+function isValidNumberInput(value: string): boolean {
+  // Allow empty input or valid numbers (including decimals)
+  return value === '' || /^(\d+)?(\.\d+)?$/.test(value);
+}
+
 export default function SearchForm({ onSearch }: SearchFormProps) {
+  const dispatch = useAppDispatch();
+  const { loading, searchParams } = useAppSelector(state => state.buildings);
+  
   const [filters, setFilters] = useState<SearchFilters>({
     minYield: '',
     maxYield: '',
@@ -25,21 +38,68 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
     minCap: '',
     maxCap: '',
   });
+  
+  const [validationErrors, setValidationErrors] = useState<Partial<Record<keyof SearchFilters, boolean>>>({});
+
+  // Update local form state when Redux search params change
+  useEffect(() => {
+    if (searchParams) {
+      setFilters({
+        minYield: searchParams.minYield || '',
+        maxYield: searchParams.maxYield || '',
+        minPrice: searchParams.minPrice || '',
+        maxPrice: searchParams.maxPrice || '',
+        minCap: searchParams.minCap || '',
+        maxCap: searchParams.maxCap || '',
+      });
+    }
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFilters(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Validate numeric input
+    if (isValidNumberInput(value)) {
+      setFilters(prev => ({
+        ...prev,
+        [name]: value
+      }));
+      
+      // Clear validation error if valid
+      if (validationErrors[name as keyof SearchFilters]) {
+        setValidationErrors(prev => ({
+          ...prev,
+          [name]: false
+        }));
+      }
+    } else {
+      // Set validation error
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: true
+      }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSearch(filters);
+    
+    // Check if there are any validation errors
+    if (Object.values(validationErrors).some(Boolean)) {
+      return;
+    }
+    
+    // Convert empty strings to undefined
+    const cleanedFilters = Object.entries(filters).reduce((acc, [key, value]) => {
+      acc[key as keyof SearchFilters] = value || '';
+      return acc;
+    }, {} as SearchFilters);
+    
+    onSearch(cleanedFilters);
   };
 
   const handleReset = () => {
+    // Reset local state
     setFilters({
       minYield: '',
       maxYield: '',
@@ -48,6 +108,17 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
       minCap: '',
       maxCap: '',
     });
+    
+    // Clear validation errors
+    setValidationErrors({});
+    
+    // Clear filters in Redux and fetch all buildings
+    dispatch(clearSearchFilters());
+    dispatch(searchBuildings({}));
+  };
+
+  const getInputClassName = (fieldName: keyof SearchFilters) => {
+    return `${styles.rangeInput} ${validationErrors[fieldName] ? styles.inputError : ''}`;
   };
 
   return (
@@ -62,7 +133,7 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
                 name="minYield"
                 value={filters.minYield}
                 onChange={handleChange}
-                className={styles.rangeInput}
+                className={getInputClassName('minYield')}
                 placeholder=""
               />
               <span className={styles.rangeSeparator}>〜</span>
@@ -71,7 +142,7 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
                 name="maxYield"
                 value={filters.maxYield}
                 onChange={handleChange}
-                className={styles.rangeInput}
+                className={getInputClassName('maxYield')}
                 placeholder=""
               />
               <span className={styles.unitLabel}>%</span>
@@ -86,7 +157,7 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
                 name="minPrice"
                 value={filters.minPrice}
                 onChange={handleChange}
-                className={styles.rangeInput}
+                className={getInputClassName('minPrice')}
                 placeholder=""
               />
               <span className={styles.rangeSeparator}>〜</span>
@@ -95,7 +166,7 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
                 name="maxPrice"
                 value={filters.maxPrice}
                 onChange={handleChange}
-                className={styles.rangeInput}
+                className={getInputClassName('maxPrice')}
                 placeholder=""
               />
               <span className={styles.unitLabel}>百万円</span>
@@ -110,7 +181,7 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
                 name="minCap"
                 value={filters.minCap}
                 onChange={handleChange}
-                className={styles.rangeInput}
+                className={getInputClassName('minCap')}
                 placeholder=""
               />
               <span className={styles.rangeSeparator}>〜</span>
@@ -119,7 +190,7 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
                 name="maxCap"
                 value={filters.maxCap}
                 onChange={handleChange}
-                className={styles.rangeInput}
+                className={getInputClassName('maxCap')}
                 placeholder=""
               />
               <span className={styles.unitLabel}>%</span>
@@ -128,10 +199,19 @@ export default function SearchForm({ onSearch }: SearchFormProps) {
         </div>
         
         <div className={styles.formFooter}>
-          <button type="submit" className={styles.searchButton}>
-            検索
+          <button 
+            type="submit" 
+            className={styles.searchButton} 
+            disabled={loading || Object.values(validationErrors).some(Boolean)}
+          >
+            {loading ? '検索中...' : '検索'}
           </button>
-          <button type="button" className={styles.resetButton} onClick={handleReset}>
+          <button 
+            type="button" 
+            className={styles.resetButton} 
+            onClick={handleReset} 
+            disabled={loading}
+          >
             検索結果をリセット
           </button>
         </div>

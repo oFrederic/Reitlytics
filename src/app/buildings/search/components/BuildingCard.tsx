@@ -18,6 +18,13 @@ interface BuildingCardProps {
   onClick?: () => void;
 }
 
+/**
+ * Format number with commas for better readability
+ */
+function formatNumberWithCommas(value: number): string {
+  return value.toLocaleString('ja-JP');
+}
+
 export default function BuildingCard({ building, isSelected = false, onClick }: BuildingCardProps) {
   return (
     <div 
@@ -43,7 +50,7 @@ export default function BuildingCard({ building, isSelected = false, onClick }: 
         </div>
         <div className={styles.detailRow}>
           <span className={styles.label}>最新鑑定評価額</span>
-          <span className={styles.value}>{building.evaluationAmount}億円</span>
+          <span className={styles.value}>{formatNumberWithCommas(building.evaluationAmount)}億円</span>
         </div>
         <div className={styles.detailRow}>
           <span className={styles.label}>現在の稼働率</span>
