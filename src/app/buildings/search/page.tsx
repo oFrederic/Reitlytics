@@ -120,25 +120,12 @@ export default function BuildingSearchPage() {
         {/* Map/Graph View - 50% */}
         <div className={styles.mapGraphContainer}>
           {activeView === 'map' ? (
-            <div className="h-full">
-              <h2 className="text-lg font-semibold mb-2">地図表示</h2>
-              {selectedUiBuilding && (
-                <div className={styles.selectedBuildingInfo}>
-                  <h3 className="font-medium">選択された建物</h3>
-                  <p>{selectedUiBuilding.name}</p>
-                  <p>{selectedUiBuilding.type}</p>
-                  <p>評価額: {selectedUiBuilding.evaluationAmount}億円</p>
-                </div>
-              )}
-              <div className="h-[calc(100%-80px)] rounded-lg overflow-hidden">
-                <MapComponent 
-                  buildings={filteredBuildings}
-                  onBuildingClick={(building) => {
-                    dispatch(setSelectedBuilding(building));
-                  }}
-                />
-              </div>
-            </div>
+            <MapComponent 
+              buildings={filteredBuildings}
+              onBuildingClick={(building) => {
+                dispatch(setSelectedBuilding(building));
+              }}
+            />
           ) : (
             <div>
               <h2 className="text-lg font-semibold mb-2">分析表示</h2>
