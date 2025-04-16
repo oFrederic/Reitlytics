@@ -112,15 +112,40 @@ export default function MapComponent({
       el.style.height = '20px';
       el.style.borderRadius = '50%';
       el.style.cursor = 'pointer';
+      el.style.border = '2px solid white'; // Add white border for better visibility
+      el.style.boxShadow = '0 0 2px rgba(0,0,0,0.3)'; // Subtle shadow
+      
+      // Create popup for this marker
+      const popup = new mapboxgl.Popup({ 
+        offset: 25,
+        closeButton: false,
+        closeOnClick: false
+      })
+      .setHTML(`<h3 style="font-weight: bold; margin-bottom: 4px;">${building.buildingSpec.name}</h3>
+                <p style="margin: 0;">${building.buildingSpec.address}</p>
+                <p style="margin-top: 4px;">評価額: ${(building.yieldEvaluation.appraisedPrice / 100000000).toFixed(2)}億円</p>`);
       
       // Create and add marker with popup
       const marker = new mapboxgl.Marker(el)
         .setLngLat([longitude, latitude])
-        .setPopup(
-          new mapboxgl.Popup({ offset: 25 })
-            .setHTML(`<h3>${building.buildingSpec.name}</h3><p>${building.buildingSpec.address}</p>`)
-        )
-        .addTo(map.current);
+        .setPopup(popup);
+        
+      // Only add to map if map.current exists
+      if (map.current) {
+        marker.addTo(map.current);
+      }
+      
+      // Show popup on hover
+      el.addEventListener('mouseenter', () => {
+        if (map.current) {
+          popup.addTo(map.current);
+        }
+      });
+      
+      // Hide popup when not hovering
+      el.addEventListener('mouseleave', () => {
+        popup.remove();
+      });
       
       // Set up click handler
       if (onBuildingClick) {
