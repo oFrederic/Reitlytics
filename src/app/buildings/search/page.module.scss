@@ -1,0 +1,156 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 60px;
+  background-color: white;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.toggleButton {
+  background: none;
+  border: none;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 4px;
+  
+  &:hover {
+    background-color: #f5f5f5;
+    color: #333;
+  }
+}
+
+.title {
+  margin-left: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  flex: 1;
+}
+
+.viewToggle {
+  display: flex;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.viewButton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &.active {
+    background-color: white;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 300px;
+  border-right: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+  overflow-y: auto;
+  background-color: white;
+}
+
+.hidden {
+  width: 0;
+  border: none;
+  overflow: hidden;
+}
+
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.expanded {
+  flex: 1;
+}
+
+.contentWrapper {
+  display: flex;
+  height: 100%;
+}
+
+.buildingList {
+  width: 350px;
+  border-right: 1px solid #e0e0e0;
+  overflow-y: auto;
+  background-color: white;
+}
+
+.viewContent {
+  flex: 1;
+  overflow: hidden;
+  background-color: #f9f9f9;
+}
+
+.loading, .error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.error {
+  color: #e53935;
+}
+
+.analysisView {
+  padding: 16px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.chartsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chart {
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+}
+
+.noSelection {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+} 

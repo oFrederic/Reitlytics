@@ -47,6 +47,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.backButtonNoTitle {
+  margin-left: 16px;
 }
 
 .backButtonIcon {
@@ -119,33 +124,34 @@
 
 /* Main content grid layout */
 .contentContainer {
-  height: 100%;
-  overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(200px, 25%) minmax(200px, 25%) minmax(400px, 50%);
+  grid-template-columns: 25% 25% 50%;
+  overflow: hidden;
+}
+
+.contentContainerNoSearch {
+  grid-template-columns: 33% 67%;
 }
 
 .searchFormContainer {
-  background-color: white;
   border-right: 1px solid #e0e0e0;
-  padding: 16px;
   overflow-y: auto;
-  min-width: 0;
+  height: 100%;
 }
 
 .buildingListContainer {
-  background-color: white;
   border-right: 1px solid #e0e0e0;
-  padding: 16px;
   overflow-y: auto;
-  min-width: 0;
+  height: 100%;
+}
+
+.buildingListContainerWide {
+  border-left: 1px solid #e0e0e0;
 }
 
 .mapGraphContainer {
-  background-color: #eee;
-  padding: 16px;
-  min-width: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  height: 100%;
 }
 
 /* Responsive styles for mobile */

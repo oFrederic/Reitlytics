@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import styles from './search.module.css';
 import { IoLocationOutline } from 'react-icons/io5';
 import { IoStatsChartOutline } from 'react-icons/io5';
-import { IoChevronBack } from 'react-icons/io5';
+import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
 import SearchForm, { SearchFilters } from './components/SearchForm';
 import BuildingList from './components/BuildingList';
 import { BuildingData } from './components/BuildingCard';
@@ -21,11 +21,30 @@ export default function BuildingSearchPage() {
   const [activeView, setActiveView] = useState('map'); // 'map' or 'analysis'
   const [uiBuildings, setUiBuildings] = useState<BuildingData[]>([]);
   const [selectedUiBuilding, setSelectedUiBuilding] = useState<BuildingData | null>(null);
+  const [searchFormVisible, setSearchFormVisible] = useState(true);
+  // Reference to track layout changes
+  const layoutChangeRef = useRef(0);
 
   // Fetch buildings on component mount
   useEffect(() => {
     dispatch(fetchBuildings());
   }, [dispatch]);
+
+  // Update layout change counter when search form visibility changes
+  useEffect(() => {
+    // Increment the counter to trigger layout updates
+    layoutChangeRef.current += 1;
+    
+    // Give the DOM time to update before triggering resize events
+    const timeoutId = setTimeout(() => {
+      // Dispatch a resize event to make the map re-render
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('resize'));
+      }
+    }, 300); // Wait for CSS transitions to complete
+    
+    return () => clearTimeout(timeoutId);
+  }, [searchFormVisible]);
 
   // Transform JReitBuilding to BuildingData when filtered buildings change
   useEffect(() => {
@@ -74,9 +93,16 @@ export default function BuildingSearchPage() {
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.pageTitle}>検索</h1>
-          <button className={styles.backButton}>
-            <IoChevronBack className={styles.backButtonIcon} />
+          {searchFormVisible && <h1 className={styles.pageTitle}>検索</h1>}
+          <button 
+            className={`${styles.backButton} ${!searchFormVisible ? styles.backButtonNoTitle : ''}`}
+            onClick={() => setSearchFormVisible(!searchFormVisible)}
+            aria-label={searchFormVisible ? "Hide search form" : "Show search form"}
+          >
+            {searchFormVisible ? 
+              <IoChevronBack className={styles.backButtonIcon} /> : 
+              <IoChevronForward className={styles.backButtonIcon} />
+            }
           </button>
         </div>
         
@@ -108,14 +134,16 @@ export default function BuildingSearchPage() {
       </header>
       
       {/* Main content */}
-      <div className={styles.contentContainer}>
+      <div className={`${styles.contentContainer} ${!searchFormVisible ? styles.contentContainerNoSearch : ''}`}>
         {/* Search Form - 25% */}
-        <div className={styles.searchFormContainer}>
-          <SearchForm onSearch={handleSearch} />
-        </div>
+        {searchFormVisible && (
+          <div className={styles.searchFormContainer}>
+            <SearchForm onSearch={handleSearch} />
+          </div>
+        )}
         
         {/* Building List - 25% */}
-        <div className={styles.buildingListContainer}>
+        <div className={`${styles.buildingListContainer} ${!searchFormVisible ? styles.buildingListContainerWide : ''}`}>
           {error ? (
             <div className="p-4 text-red-500">エラーが発生しました: {error}</div>
           ) : (
