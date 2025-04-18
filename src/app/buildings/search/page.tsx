@@ -51,7 +51,14 @@ export default function BuildingSearchPage() {
   };
 
   // Handle building selection
-  const handleSelectBuilding = (building: BuildingData) => {
+  const handleSelectBuilding = (building: BuildingData | null) => {
+    if (!building) {
+      // Handle deselection
+      dispatch(setSelectedBuilding(null));
+      setSelectedUiBuilding(null);
+      return;
+    }
+
     // Find the corresponding JReitBuilding in the Redux store
     const selectedJReitBuilding = filteredBuildings.find(b => b.id === building.id) || null;
     
@@ -124,8 +131,15 @@ export default function BuildingSearchPage() {
           {activeView === 'map' ? (
             <MapComponent 
               buildings={filteredBuildings}
+              selectedBuilding={selectedBuilding}
               onBuildingClick={(building) => {
-                dispatch(setSelectedBuilding(building));
+                // If clicked building is already selected, deselect it
+                if (selectedBuilding && building.id === selectedBuilding.id) {
+                  dispatch(setSelectedBuilding(null));
+                } else {
+                  // Otherwise select the new building
+                  dispatch(setSelectedBuilding(building));
+                }
               }}
             />
           ) : (
