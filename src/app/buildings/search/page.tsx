@@ -15,12 +15,26 @@ import { useAppDispatch, useAppSelector } from '@/redux/store';
 import { fetchBuildings, searchBuildings, setSelectedBuilding } from '@/redux/slices/buildingsSlice';
 import { mapToBuildings, mapToBuilding } from './utils/buildingMapper';
 
+// Define a simplified JReitBuilding type for hover functionality
+interface JReitBuilding {
+  id: string;
+  buildingSpec: {
+    name: string;
+    address: string;
+    latitude: string;
+    longitude: string;
+  };
+  [key: string]: any;
+}
+
 export default function BuildingSearchPage() {
   const dispatch = useAppDispatch();
   const { filteredBuildings, selectedBuilding, loading, error } = useAppSelector(state => state.buildings);
   const [activeView, setActiveView] = useState('map'); // 'map' or 'analysis'
   const [uiBuildings, setUiBuildings] = useState<BuildingData[]>([]);
   const [selectedUiBuilding, setSelectedUiBuilding] = useState<BuildingData | null>(null);
+  const [hoveredUiBuilding, setHoveredUiBuilding] = useState<BuildingData | null>(null);
+  const [hoveredJReitBuilding, setHoveredJReitBuilding] = useState<JReitBuilding | null>(null);
   const [searchFormVisible, setSearchFormVisible] = useState(true);
   // Reference to track layout changes
   const layoutChangeRef = useRef(0);
@@ -63,6 +77,19 @@ export default function BuildingSearchPage() {
       setSelectedUiBuilding(null);
     }
   }, [selectedBuilding]);
+
+  // Handle building hover
+  const handleHoverBuilding = (building: BuildingData | null) => {
+    setHoveredUiBuilding(building);
+    
+    if (building) {
+      // Find the corresponding JReitBuilding for the map
+      const hoveredBuilding = filteredBuildings.find(b => b.id === building.id) || null;
+      setHoveredJReitBuilding(hoveredBuilding);
+    } else {
+      setHoveredJReitBuilding(null);
+    }
+  };
 
   // Handle form search
   const handleSearch = (filters: SearchFilters) => {
@@ -149,7 +176,8 @@ export default function BuildingSearchPage() {
           ) : (
             <BuildingList 
               buildings={uiBuildings} 
-              onSelectBuilding={handleSelectBuilding} 
+              onSelectBuilding={handleSelectBuilding}
+              onHoverBuilding={handleHoverBuilding}
             />
           )}
         </div>
@@ -160,6 +188,7 @@ export default function BuildingSearchPage() {
             <MapComponent 
               buildings={filteredBuildings}
               selectedBuilding={selectedBuilding}
+              hoveredBuilding={hoveredJReitBuilding}
               onBuildingClick={(building) => {
                 // If clicked building is already selected, deselect it
                 if (selectedBuilding && building.id === selectedBuilding.id) {

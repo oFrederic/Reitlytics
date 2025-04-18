@@ -37,6 +37,7 @@ function getBuildingTypeLabel(assetType: {
 interface MapComponentProps {
   buildings?: JReitBuilding[];
   selectedBuilding?: JReitBuilding | null;
+  hoveredBuilding?: JReitBuilding | null;
   center?: [number, number]; // [longitude, latitude]
   zoom?: number;
   onBuildingClick?: (building: JReitBuilding) => void;
@@ -45,6 +46,7 @@ interface MapComponentProps {
 export default function MapComponent({
   buildings = [],
   selectedBuilding = null,
+  hoveredBuilding = null,
   center = DEFAULT_MAP_CENTER,
   zoom = DEFAULT_MAP_ZOOM,
   onBuildingClick
@@ -54,6 +56,7 @@ export default function MapComponent({
   const markers = useRef<{[id: string]: mapboxgl.Marker & { popup?: mapboxgl.Popup, building: JReitBuilding }}>({});
   const [mapLoaded, setMapLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const prevHoveredBuildingRef = useRef<string | null>(null);
 
   // Initialize map on component mount
   useEffect(() => {
@@ -136,20 +139,38 @@ export default function MapComponent({
       else if (building.assetType.isHotel) markerColor = MARKER_COLORS.hotel;
       else if (building.assetType.isResidential) markerColor = MARKER_COLORS.residential;
       
-      // Determine if this is the selected building
+      // Determine if this is the selected or hovered building
       const isSelected = selectedBuilding && building.id === selectedBuilding.id;
+      const isHovered = hoveredBuilding && building.id === hoveredBuilding.id;
       
       // Create custom marker element
       const el = document.createElement('div');
       el.className = 'marker';
       el.style.backgroundColor = markerColor; // Always use the building type color
-      el.style.width = isSelected ? '26px' : '18px'; // Make selected marker larger
-      el.style.height = isSelected ? '26px' : '18px';
+      
+      // Size: Selected > Hovered > Normal
+      const size = isSelected ? '26px' : (isHovered ? '24px' : '18px');
+      el.style.width = size;
+      el.style.height = size;
+      
+      // Border and shadow styling
       el.style.borderRadius = '50%';
       el.style.cursor = 'pointer';
-      el.style.border = isSelected ? '3px solid white' : '2px solid white'; // Thicker border for selected
-      el.style.boxShadow = isSelected ? '0 0 8px rgba(0, 0, 0, 0.3)' : '0 0 2px rgba(0,0,0,0.2)'; // Add shadow for selected
-      el.style.zIndex = isSelected ? '100' : '1'; // Make selected marker appear on top
+      
+      // Set styles based on state (selected or hovered)
+      if (isSelected) {
+        el.style.border = '3px solid white';
+        el.style.boxShadow = '0 0 8px rgba(0, 0, 0, 0.3)';
+        el.style.zIndex = '100'; // Top priority
+      } else if (isHovered) {
+        el.style.border = '3px solid white';
+        el.style.boxShadow = '0 0 6px rgba(0, 0, 0, 0.25)';
+        el.style.zIndex = '50'; // Higher than normal, lower than selected
+      } else {
+        el.style.border = '2px solid white';
+        el.style.boxShadow = '0 0 2px rgba(0,0,0,0.2)';
+        el.style.zIndex = '1'; // Normal
+      }
       
       // Create popup for this marker
       const popup = new mapboxgl.Popup({ 
@@ -269,22 +290,36 @@ export default function MapComponent({
         marker.addTo(map.current);
       }
       
-      // Show popup for selected building or on hover for others
-      if (isSelected) {
+      // Show popup for selected or hovered building
+      if (isSelected || isHovered) {
         if (map.current) {
           popup.addTo(map.current);
         }
       } else {
-        // Show popup on hover for non-selected buildings
+        // Show popup on hover for normal buildings
         el.addEventListener('mouseenter', () => {
           if (map.current) {
             popup.addTo(map.current);
+            
+            // Make marker larger and bring to front on hover
+            el.style.width = '24px';
+            el.style.height = '24px';
+            el.style.border = '3px solid white';
+            el.style.boxShadow = '0 0 6px rgba(0, 0, 0, 0.25)';
+            el.style.zIndex = '50';
           }
         });
         
-        // Hide popup when not hovering (only for non-selected buildings)
+        // Revert to normal size when not hovering
         el.addEventListener('mouseleave', () => {
           popup.remove();
+          
+          // Reset marker to normal size
+          el.style.width = '18px';
+          el.style.height = '18px';
+          el.style.border = '2px solid white';
+          el.style.boxShadow = '0 0 2px rgba(0,0,0,0.2)';
+          el.style.zIndex = '1';
         });
       }
       
@@ -298,7 +333,7 @@ export default function MapComponent({
       // Store marker with its associated building for later reference
       markers.current[building.id] = Object.assign(marker, { popup, building });
     });
-  }, [buildings, selectedBuilding, mapLoaded, onBuildingClick]);
+  }, [buildings, selectedBuilding, hoveredBuilding, mapLoaded, onBuildingClick]);
 
   // Update markers when buildings or selected building changes
   useEffect(() => {
@@ -341,6 +376,46 @@ export default function MapComponent({
     }
   }, [selectedBuilding, mapLoaded]);
 
+  // Handle hovered building - center on it and show popup but don't zoom
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+    
+    // Close any previously opened hover popup
+    if (prevHoveredBuildingRef.current && 
+        prevHoveredBuildingRef.current !== selectedBuilding?.id &&
+        markers.current[prevHoveredBuildingRef.current]?.popup) {
+      markers.current[prevHoveredBuildingRef.current].popup?.remove();
+    }
+    
+    if (hoveredBuilding && hoveredBuilding.id !== selectedBuilding?.id) {
+      // Keep track of currently hovered building
+      prevHoveredBuildingRef.current = hoveredBuilding.id;
+      
+      const hoveredMarker = markers.current[hoveredBuilding.id];
+      if (hoveredMarker) {
+        // Get coordinates
+        const longitude = parseFloat(hoveredBuilding.buildingSpec.longitude);
+        const latitude = parseFloat(hoveredBuilding.buildingSpec.latitude);
+        
+        if (!isNaN(longitude) && !isNaN(latitude)) {
+          // Center map on hovered building without changing zoom
+          map.current.easeTo({
+            center: [longitude, latitude],
+            duration: 500, // Smooth animation
+          });
+          
+          // Show popup for hovered building
+          if (hoveredMarker.popup && map.current) {
+            hoveredMarker.popup.addTo(map.current);
+          }
+        }
+      }
+    } else if (!hoveredBuilding && !selectedBuilding && prevHoveredBuildingRef.current) {
+      // No building hovered or selected, clear the ref
+      prevHoveredBuildingRef.current = null;
+    }
+  }, [hoveredBuilding, selectedBuilding, mapLoaded]);
+
   // Add style element for custom popup styling
   useEffect(() => {
     // Only add the style once
@@ -349,13 +424,18 @@ export default function MapComponent({
       style.id = 'mapbox-custom-styles';
       style.innerHTML = `
         .building-popup {
-          z-index: 10 !important;
+          z-index: 1000 !important;
         }
         .mapboxgl-popup {
-          z-index: 10 !important; 
+          z-index: 1000 !important; 
         }
         .mapboxgl-marker {
-          z-index: 1;
+          transition: width 0.2s, height 0.2s, box-shadow 0.2s, border 0.2s;
+        }
+        /* Ensure selected/hovered markers appear on top */
+        .mapboxgl-marker[style*="z-index: 100"],
+        .mapboxgl-marker[style*="z-index: 50"] {
+          z-index: 100 !important;
         }
       `;
       document.head.appendChild(style);

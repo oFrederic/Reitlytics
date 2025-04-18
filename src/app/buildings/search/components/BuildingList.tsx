@@ -8,9 +8,10 @@ import { useAppSelector } from '@/redux/store';
 interface BuildingListProps {
   buildings: BuildingData[];
   onSelectBuilding?: (building: BuildingData | null) => void;
+  onHoverBuilding?: (building: BuildingData | null) => void;
 }
 
-export default function BuildingList({ buildings, onSelectBuilding }: BuildingListProps) {
+export default function BuildingList({ buildings, onSelectBuilding, onHoverBuilding }: BuildingListProps) {
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const { loading, selectedBuilding } = useAppSelector(state => state.buildings);
   const listContainerRef = useRef<HTMLDivElement>(null);
@@ -115,6 +116,18 @@ export default function BuildingList({ buildings, onSelectBuilding }: BuildingLi
     };
   }, []);
 
+  const handleHoverEnter = (building: BuildingData) => {
+    if (onHoverBuilding) {
+      onHoverBuilding(building);
+    }
+  };
+
+  const handleHoverLeave = () => {
+    if (onHoverBuilding) {
+      onHoverBuilding(null);
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -154,6 +167,8 @@ export default function BuildingList({ buildings, onSelectBuilding }: BuildingLi
           <div 
             key={building.id} 
             ref={itemRefs.current[building.id] || null}
+            onMouseEnter={() => handleHoverEnter(building)}
+            onMouseLeave={handleHoverLeave}
           >
             <BuildingCard 
               building={building}
