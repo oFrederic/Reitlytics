@@ -121,6 +121,8 @@
 .contentContainer {
   height: 100%;
   overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(200px, 25%) minmax(200px, 25%) minmax(400px, 50%);
 }
 
 .searchFormContainer {
@@ -128,6 +130,7 @@
   border-right: 1px solid #e0e0e0;
   padding: 16px;
   overflow-y: auto;
+  min-width: 0;
 }
 
 .buildingListContainer {
@@ -135,11 +138,14 @@
   border-right: 1px solid #e0e0e0;
   padding: 16px;
   overflow-y: auto;
+  min-width: 0;
 }
 
 .mapGraphContainer {
   background-color: #eee;
   padding: 16px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Responsive styles for mobile */
