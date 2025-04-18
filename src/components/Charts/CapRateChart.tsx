@@ -10,6 +10,21 @@ import {
   Tooltip,
   ResponsiveContainer
 } from 'recharts';
+import {
+  TimeFilterOption,
+  TIME_FILTER_LABELS,
+  DataGranularity,
+  CHART_COLORS,
+  FILTER_STYLES,
+  formatDateForDisplay,
+  calculateMonthsBetween,
+  isFilterAvailable,
+  getTimeGroupKey,
+  createDefaultDataGranularity,
+  calculateInitialTimeFilter,
+  calculateChartWidth,
+  TOOLTIP_STYLES
+} from './ChartUtils';
 
 /**
  * Type Definitions
@@ -34,57 +49,9 @@ interface ChartDataPoint {
 interface CapRateChartProps {
   capRateHistories: CapRateHistory[];
   height?: number;
+  compact?: boolean;
+  className?: string;
 }
-
-// Time filter options
-enum TimeFilterOption {
-  Month = '1month',
-  Quarter = '3months',
-  Halfyear = '6months',
-  Year = '1year'
-}
-
-// Data granularity status
-interface DataGranularity {
-  minIntervalMonths: number;
-  isMonthlyAvailable: boolean;
-  isQuarterlyAvailable: boolean;
-  isHalfYearlyAvailable: boolean;
-}
-
-/**
- * Constants
- */
-const TIME_FILTER_LABELS: Record<TimeFilterOption, string> = {
-  [TimeFilterOption.Month]: '1ヶ月',
-  [TimeFilterOption.Quarter]: '4半期',
-  [TimeFilterOption.Halfyear]: '半期',
-  [TimeFilterOption.Year]: '1年'
-};
-
-const CHART_COLORS = {
-  line: '#4F46E5',
-  grid: '#e0e0e0',
-  text: '#666666',
-  warning: {
-    text: '#9a3412',
-    bg: '#ffedd5',
-    border: '#fed7aa'
-  }
-};
-
-const FILTER_STYLES = {
-  active: 'bg-blue-500 text-white',
-  inactive: 'bg-gray-200',
-  disabled: 'bg-gray-100 text-gray-400 cursor-not-allowed'
-};
-
-// Minimum interval thresholds (in months)
-const GRANULARITY_THRESHOLDS = {
-  monthly: 1.1,     // Allow a little buffer for month-to-month data
-  quarterly: 3.1,   // Allow a little buffer for quarterly data
-  halfYearly: 6.1   // Allow a little buffer for half-yearly data
-};
 
 /**
  * Sub-Components
@@ -133,7 +100,7 @@ EmptyState.displayName = 'EmptyState';
 const ChartLegend = memo(() => (
   <div className="flex justify-center w-full mb-2">
     <div className="inline-flex items-center gap-2">
-      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: CHART_COLORS.line }}></div>
+      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: CHART_COLORS.capRate }}></div>
       <span className="text-sm">キャップレート</span>
     </div>
   </div>
@@ -174,57 +141,14 @@ const FilterButtons = memo(({
 FilterButtons.displayName = 'FilterButtons';
 
 /**
- * Utility Functions
- */
-
-// Format date for display based on selected time period
-const formatDateForDisplay = (date: Date, filter: TimeFilterOption): string => {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1; // getMonth is 0-indexed
-  const day = date.getDate();
-  
-  // Format based on the time filter
-  switch (filter) {
-    case TimeFilterOption.Month:
-      return `${year}/${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`;
-    case TimeFilterOption.Quarter:
-    case TimeFilterOption.Halfyear:
-      return `${year}/${month.toString().padStart(2, '0')}`;
-    case TimeFilterOption.Year:
-    default:
-      return `${year}`;
-  }
-};
-
-// Calculate months between two dates
-const calculateMonthsBetween = (date1: Date, date2: Date): number => {
-  const yearDiff = date2.getFullYear() - date1.getFullYear();
-  const monthDiff = date2.getMonth() - date1.getMonth();
-  const dayFactor = (date2.getDate() - date1.getDate()) / 30; // Approximate for partial months
-  
-  return yearDiff * 12 + monthDiff + dayFactor;
-};
-
-// Check if a filter option should be accessible based on data granularity
-const isFilterAvailable = (filter: TimeFilterOption, minInterval: number): boolean => {
-  switch (filter) {
-    case TimeFilterOption.Month:
-      return minInterval <= GRANULARITY_THRESHOLDS.monthly;
-    case TimeFilterOption.Quarter:
-      return minInterval <= GRANULARITY_THRESHOLDS.quarterly;
-    case TimeFilterOption.Halfyear:
-      return minInterval <= GRANULARITY_THRESHOLDS.halfYearly;
-    case TimeFilterOption.Year:
-      return true; // Year is always available
-    default:
-      return false;
-  }
-};
-
-/**
  * Main Component
  */
-function CapRateChart({ capRateHistories = [], height = 300 }: CapRateChartProps) {
+function CapRateChart({ 
+  capRateHistories = [], 
+  height = 300,
+  compact = false,
+  className
+}: CapRateChartProps) {
   // Process and sort the raw data chronologically
   const sortedHistories = useMemo(() => {
     if (!capRateHistories?.length) return [];
@@ -238,12 +162,7 @@ function CapRateChart({ capRateHistories = [], height = 300 }: CapRateChartProps
   const dataGranularity = useMemo((): DataGranularity => {
     // Default values if we don't have enough data points
     if (sortedHistories.length < 2) {
-      return {
-        minIntervalMonths: 0,
-        isMonthlyAvailable: true,
-        isQuarterlyAvailable: true,
-        isHalfYearlyAvailable: true
-      };
+      return createDefaultDataGranularity();
     }
     
     // Convert closing dates to Date objects
@@ -265,12 +184,9 @@ function CapRateChart({ capRateHistories = [], height = 300 }: CapRateChartProps
   }, [sortedHistories]);
   
   // Initialize time filter based on data granularity
-  const initialTimeFilter = useMemo(() => {
-    if (dataGranularity.isMonthlyAvailable) return TimeFilterOption.Month;
-    if (dataGranularity.isQuarterlyAvailable) return TimeFilterOption.Quarter;
-    if (dataGranularity.isHalfYearlyAvailable) return TimeFilterOption.Halfyear;
-    return TimeFilterOption.Year;
-  }, [dataGranularity]);
+  const initialTimeFilter = useMemo(() => 
+    calculateInitialTimeFilter(dataGranularity)
+  , [dataGranularity]);
   
   // State for active time filter
   const [timeFilter, setTimeFilter] = useState<TimeFilterOption>(initialTimeFilter);
@@ -296,26 +212,7 @@ function CapRateChart({ capRateHistories = [], height = 300 }: CapRateChartProps
     // Group all data points based on the selected time filter
     sortedHistories.forEach(point => {
       const date = new Date(point.closingDate);
-      let groupKey: string;
-      
-      // Create grouping key based on the time filter
-      switch (timeFilter) {
-        case TimeFilterOption.Month:
-          groupKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
-          break;
-        case TimeFilterOption.Quarter:
-          const quarter = Math.floor(date.getMonth() / 3) + 1;
-          groupKey = `${date.getFullYear()}-Q${quarter}`;
-          break;
-        case TimeFilterOption.Halfyear:
-          const half = Math.floor(date.getMonth() / 6) + 1;
-          groupKey = `${date.getFullYear()}-H${half}`;
-          break;
-        case TimeFilterOption.Year:
-        default:
-          groupKey = `${date.getFullYear()}`;
-          break;
-      }
+      const groupKey = getTimeGroupKey(date, timeFilter);
       
       // Initialize group if it doesn't exist
       if (!groupedData[groupKey]) {
@@ -359,15 +256,9 @@ function CapRateChart({ capRateHistories = [], height = 300 }: CapRateChartProps
   
   // Chart configuration
   const needsScrolling = useMemo(() => chartData.length > 20, [chartData]);
-  
-  const chartWidth = useMemo(() => {
-    const minWidth = Math.max(chartData.length * 60, 800);
-    return needsScrolling ? minWidth : '100%';
-  }, [chartData.length, needsScrolling]);
-  
-  const minInterval = useMemo(() => 
-    dataGranularity?.minIntervalMonths || 0
-  , [dataGranularity]);
+  const chartWidth = useMemo(() => 
+    calculateChartWidth(chartData.length, needsScrolling)
+  , [chartData.length, needsScrolling]);
   
   // Event handlers
   const handleSetFilter = useCallback((filter: TimeFilterOption) => () => {
@@ -385,9 +276,9 @@ function CapRateChart({ capRateHistories = [], height = 300 }: CapRateChartProps
   
   // Render
   return (
-    <div className="bg-white p-4 rounded-lg shadow">
+    <div className={`bg-white p-4 rounded-lg shadow ${className || ''} ${compact ? 'p-2' : ''}`}>
       <div className="flex items-center justify-start mb-4">
-        <h3 className="text-lg font-semibold">キャップレート推移</h3>
+        <h3 className={`text-lg font-semibold ${compact ? 'text-base' : ''}`}>キャップレート推移</h3>
       </div>
       
       {chartData.length > 0 ? (
@@ -409,7 +300,7 @@ function CapRateChart({ capRateHistories = [], height = 300 }: CapRateChartProps
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={chartData}
-                    margin={{ top: 5, right: 30, left: 5, bottom: 25 }}
+                    margin={{ top: 10, right: 20, left: 2, bottom: 20 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
                     <XAxis 
@@ -417,10 +308,10 @@ function CapRateChart({ capRateHistories = [], height = 300 }: CapRateChartProps
                       stroke={CHART_COLORS.text}
                       angle={-45}
                       textAnchor="end"
-                      tickMargin={10}
-                      height={32}
-                      padding={{ left: 10, right: 10 }}
-                      tick={{ fontSize: 12 }}
+                      tickMargin={5}
+                      height={28}
+                      padding={{ left: 5, right: 5 }}
+                      tick={{ fontSize: 11 }}
                       interval={0} // Show all ticks, no skipping
                       axisLine={false} // Hide the X-axis line
                     />
@@ -430,6 +321,7 @@ function CapRateChart({ capRateHistories = [], height = 300 }: CapRateChartProps
                       stroke={CHART_COLORS.text}
                       tick={{ fontSize: 12 }}
                       axisLine={{ stroke: CHART_COLORS.grid }}
+                      tickCount={10}
                     />
                     <Tooltip 
                       formatter={formatTooltipValue}
@@ -441,17 +333,13 @@ function CapRateChart({ capRateHistories = [], height = 300 }: CapRateChartProps
                         }
                         return label;
                       }}
-                      contentStyle={{ 
-                        backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-                        border: `1px solid ${CHART_COLORS.grid}`,
-                        borderRadius: '4px'
-                      }}
+                      contentStyle={TOOLTIP_STYLES}
                     />
                     <Line
                       type="monotone"
                       dataKey="capRate"
                       name="キャップレート"
-                      stroke={CHART_COLORS.line}
+                      stroke={CHART_COLORS.capRate}
                       strokeWidth={2}
                       activeDot={{ r: 6 }}
                       dot={{ r: 4 }}

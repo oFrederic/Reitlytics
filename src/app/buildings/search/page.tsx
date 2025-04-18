@@ -10,6 +10,7 @@ import BuildingList from './components/BuildingList';
 import { BuildingData } from './components/BuildingCard';
 import MapComponent from '@/components/Map/MapComponent';
 import CapRateChart from '@/components/Charts/CapRateChart';
+import OccupancyRateChart from '@/components/Charts/OccupancyRateChart';
 import { useAppDispatch, useAppSelector } from '@/redux/store';
 import { fetchBuildings, searchBuildings, setSelectedBuilding } from '@/redux/slices/buildingsSlice';
 import { mapToBuildings, mapToBuilding } from './utils/buildingMapper';
@@ -128,15 +129,27 @@ export default function BuildingSearchPage() {
               }}
             />
           ) : (
-            <div className="mt-4 h-[calc(100%-120px)]">
+            <div>
               {selectedBuilding ? (
-                <CapRateChart 
-                  capRateHistories={selectedBuilding.capRateHistories || []} 
-                  height={300}
-                />
+                <div className="overflow-y-auto max-h-[calc(100vh-80px)]">
+                  <CapRateChart 
+                    capRateHistories={selectedBuilding.capRateHistories || []} 
+                    height={250}
+                    className="mb-4" 
+                  />
+                  <OccupancyRateChart 
+                    occupancyRateHistories={selectedBuilding.financials?.map((f, index) => ({
+                      leasing: f.leasing,
+                      // Use the corresponding capRate history date if available, otherwise use incremental dates
+                      closingDate: selectedBuilding.capRateHistories?.[index]?.closingDate || 
+                        new Date(new Date(selectedBuilding.capRateHistories?.[0]?.closingDate || '').getTime() + index * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+                    })) || []} 
+                    height={250}
+                  />
+                </div>
               ) : (
                 <div className="flex h-[300px] items-center justify-center bg-gray-50 rounded-lg">
-                  <p className="text-gray-500">建物を選択すると、キャップレート推移が表示されます</p>
+                  <p className="text-gray-500">建物を選択すると、キャップレート推移と稼働率推移が表示されます</p>
                 </div>
               )}
             </div>
