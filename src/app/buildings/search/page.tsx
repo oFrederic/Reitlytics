@@ -9,6 +9,7 @@ import SearchForm, { SearchFilters } from './components/SearchForm';
 import BuildingList from './components/BuildingList';
 import { BuildingData } from './components/BuildingCard';
 import MapComponent from '@/components/Map/MapComponent';
+import CapRateChart from '@/components/Charts/CapRateChart';
 import { useAppDispatch, useAppSelector } from '@/redux/store';
 import { fetchBuildings, searchBuildings, setSelectedBuilding } from '@/redux/slices/buildingsSlice';
 import { mapToBuildings, mapToBuilding } from './utils/buildingMapper';
@@ -127,19 +128,17 @@ export default function BuildingSearchPage() {
               }}
             />
           ) : (
-            <div>
-              <h2 className="text-lg font-semibold mb-2">分析表示</h2>
-              {selectedUiBuilding && (
-                <div className={styles.selectedBuildingInfo}>
-                  <h3 className="font-medium">選択された建物の分析</h3>
-                  <p>{selectedUiBuilding.name}</p>
-                  <p>Cap Rate: {selectedUiBuilding.capRate}%</p>
-                  <p>稼働率: {selectedUiBuilding.occupancyRate}%</p>
+            <div className="mt-4 h-[calc(100%-120px)]">
+              {selectedBuilding ? (
+                <CapRateChart 
+                  capRateHistories={selectedBuilding.capRateHistories || []} 
+                  height={300}
+                />
+              ) : (
+                <div className="flex h-[300px] items-center justify-center bg-gray-50 rounded-lg">
+                  <p className="text-gray-500">建物を選択すると、キャップレート推移が表示されます</p>
                 </div>
               )}
-              <div className="h-[300px] bg-green-50 flex justify-center items-center rounded-lg">
-                📊 分析グラフ（準備中）
-              </div>
             </div>
           )}
         </div>
