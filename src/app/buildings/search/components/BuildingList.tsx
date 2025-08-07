@@ -15,7 +15,7 @@ export default function BuildingList({ buildings, onSelectBuilding, onHoverBuild
   const [selectedBuildingId, setSelectedBuildingId] = useState<string | null>(null);
   const { loading, selectedBuilding } = useAppSelector(state => state.buildings);
   const listContainerRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<{[id: string]: React.RefObject<HTMLDivElement>}>({});
+  const itemRefs = useRef<{[id: string]: React.RefObject<HTMLDivElement | null>}>({});
   const [isUserScrolling, setIsUserScrolling] = useState(false);
   const prevSelectedIdRef = useRef<string | null>(null);
   
@@ -105,7 +105,7 @@ export default function BuildingList({ buildings, onSelectBuilding, onHoverBuild
   };
   
   // Ref for the timeout to clear on component unmount
-  const resetScrollTimeout = useRef<NodeJS.Timeout>();
+  const resetScrollTimeout = useRef<NodeJS.Timeout | undefined>(undefined);
   
   // Clean up timeout on unmount
   useEffect(() => {

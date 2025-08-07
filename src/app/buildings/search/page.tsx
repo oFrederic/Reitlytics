@@ -14,18 +14,7 @@ import OccupancyRateChart from '@/components/Charts/OccupancyRateChart';
 import { useAppDispatch, useAppSelector } from '@/redux/store';
 import { fetchBuildings, searchBuildings, setSelectedBuilding } from '@/redux/slices/buildingsSlice';
 import { mapToBuildings, mapToBuilding } from './utils/buildingMapper';
-
-// Define a simplified JReitBuilding type for hover functionality
-interface JReitBuilding {
-  id: string;
-  buildingSpec: {
-    name: string;
-    address: string;
-    latitude: string;
-    longitude: string;
-  };
-  [key: string]: any;
-}
+import type { JReitBuilding } from '@/mocks/buildings.type';
 
 export default function BuildingSearchPage() {
   const dispatch = useAppDispatch();
@@ -33,7 +22,7 @@ export default function BuildingSearchPage() {
   const [activeView, setActiveView] = useState('map'); // 'map' or 'analysis'
   const [uiBuildings, setUiBuildings] = useState<BuildingData[]>([]);
   const [selectedUiBuilding, setSelectedUiBuilding] = useState<BuildingData | null>(null);
-  const [hoveredUiBuilding, setHoveredUiBuilding] = useState<BuildingData | null>(null);
+  const [, setHoveredUiBuilding] = useState<BuildingData | null>(null);
   const [hoveredJReitBuilding, setHoveredJReitBuilding] = useState<JReitBuilding | null>(null);
   const [searchFormVisible, setSearchFormVisible] = useState(true);
   // Reference to track layout changes

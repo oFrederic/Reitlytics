@@ -1,41 +1,114 @@
+/* === Import Design System === */
+@import '../styles/base.css';
+@import '../styles/components/search.css';
+
+/* === Tailwind CSS === */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* === Legacy CSS Variables (for backward compatibility) === */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: var(--color-background);
+  --foreground: var(--color-text-primary);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: var(--color-background);
+    --foreground: var(--color-text-primary);
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-/* Custom styling for Mapbox popups */
+/* === Mapbox Customizations === */
 .mapboxgl-popup {
   max-width: 300px;
-  font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  font: 12px/20px var(--font-family-sans);
+  z-index: var(--z-index-popover);
 }
 
 .mapboxgl-popup-content {
-  padding: 10px;
-  border-radius: 4px;
+  padding: var(--spacing-2-5);
+  border-radius: var(--radius-default);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-lg);
 }
 
 .mapboxgl-popup-content h3 {
-  font-weight: bold;
-  margin: 0 0 5px;
+  font-weight: var(--font-weight-semibold);
+  margin: 0 0 var(--spacing-2);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
 }
 
 .mapboxgl-popup-content p {
   margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.mapboxgl-popup-close-button {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-lg);
+  padding: var(--spacing-1);
+}
+
+.mapboxgl-popup-close-button:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-background-secondary);
+}
+
+.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-center .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-left .mapboxgl-popup-tip,
+.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+  border-color: var(--color-border-default);
+}
+
+/* Custom popup class for building information */
+.building-popup {
+  z-index: var(--z-index-popover) !important;
+}
+
+.building-popup .mapboxgl-popup-content {
+  max-width: 320px;
+  padding: var(--spacing-3);
+}
+
+/* === Marker Styles === */
+.marker {
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.marker:hover {
+  transform: scale(1.1);
+}
+
+/* === Scrollbar Styling === */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-secondary);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-tertiary);
+}
+
+/* Firefox scrollbar styling */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-secondary) var(--color-background-secondary);
 }

@@ -1,15 +1,10 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { JReitBuilding } from '@/mocks/buildings.type';
+import { API_ENDPOINTS } from '@/constants/api';
+import { logError, getUserFriendlyErrorMessage } from '@/utils/errors';
+import type { JReitBuilding, BuildingSearchParams, ApiSuccessResponse } from '@/types';
 
-// Define search params interface that matches our search form
-export interface BuildingSearchParams {
-  minYield?: string;
-  maxYield?: string;
-  minPrice?: string;
-  maxPrice?: string;
-  minCap?: string;
-  maxCap?: string;
-}
+// Re-export for convenience
+export type { BuildingSearchParams } from '@/types';
 
 // My state interface for building data management
 interface BuildingsState {
@@ -35,21 +30,24 @@ export const fetchBuildings = createAsyncThunk(
   'buildings/fetchBuildings',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await fetch('/api/buildings');
+      const response = await fetch(API_ENDPOINTS.BUILDINGS.ROOT);
       
       if (!response.ok) {
-        throw new Error('Failed to fetch buildings');
+        throw new Error(`HTTP ${response.status}: Failed to fetch buildings`);
       }
       
-      const result = await response.json();
+      const result: ApiSuccessResponse<{ jReitBuildings: JReitBuilding[] }> = await response.json();
       
       if (!result.success) {
-        throw new Error(result.error?.message || 'Unknown error');
+        const errorMessage = result.error?.message || 'Failed to fetch buildings';
+        throw new Error(errorMessage);
       }
       
       return result.data;
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      const errorMessage = getUserFriendlyErrorMessage(error as Error);
+      logError(error as Error, { action: 'fetchBuildings' });
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -57,7 +55,7 @@ export const fetchBuildings = createAsyncThunk(
 // Async thunk to search buildings with filters
 export const searchBuildings = createAsyncThunk(
   'buildings/searchBuildings',
-  async (params: BuildingSearchParams, { getState, rejectWithValue }) => {
+  async (params: BuildingSearchParams, { rejectWithValue }) => {
     try {
       // Convert parameters to query string
       const queryParams = new URLSearchParams();
@@ -69,38 +67,35 @@ export const searchBuildings = createAsyncThunk(
         }
       });
       
-      // If no filters, use the main buildings endpoint
-      if (queryParams.toString() === '') {
-        const response = await fetch('/api/buildings');
-        if (!response.ok) {
-          throw new Error('Failed to fetch buildings');
-        }
-        
-        const result = await response.json();
-        
-        if (!result.success) {
-          throw new Error(result.error?.message || 'Unknown error');
-        }
-        
-        return { data: result.data, params };
-      }
+      // Determine endpoint
+      const hasFilters = queryParams.toString() !== '';
+      const endpoint = hasFilters 
+        ? `${API_ENDPOINTS.BUILDINGS.SEARCH}?${queryParams.toString()}`
+        : API_ENDPOINTS.BUILDINGS.ROOT;
       
-      // Otherwise use the search endpoint
-      const response = await fetch(`/api/buildings/search?${queryParams.toString()}`);
+      const response = await fetch(endpoint);
       
       if (!response.ok) {
-        throw new Error('Failed to search buildings');
+        throw new Error(`HTTP ${response.status}: Failed to search buildings`);
       }
       
-      const result = await response.json();
+      const result: ApiSuccessResponse<{ results: JReitBuilding[]; count: number; filters: BuildingSearchParams }> = await response.json();
       
       if (!result.success) {
-        throw new Error(result.error?.message || 'Unknown error');
+        const errorMessage = result.error?.message || 'Failed to search buildings';
+        throw new Error(errorMessage);
       }
       
-      return { data: { jReitBuildings: result.data.results }, params };
+      // Handle different response formats
+      const data = hasFilters 
+        ? { jReitBuildings: result.data.results }
+        : result.data;
+      
+      return { data, params };
     } catch (error) {
-      return rejectWithValue(error instanceof Error ? error.message : 'Unknown error');
+      const errorMessage = getUserFriendlyErrorMessage(error as Error);
+      logError(error as Error, { action: 'searchBuildings', params });
+      return rejectWithValue(errorMessage);
     }
   }
 );
@@ -112,7 +107,31 @@ export const buildingsSlice = createSlice({
     setSelectedBuilding: (state, action: PayloadAction<JReitBuilding | null>) => {
       state.selectedBuilding = action.payload;
     },
+    
+    clearSelectedBuilding: (state) => {
+      state.selectedBuilding = null;
+    },
+    
+    setSearchParams: (state, action: PayloadAction<BuildingSearchParams>) => {
+      state.searchParams = action.payload;
+    },
+    
     clearSearchFilters: (state) => {
+      state.searchParams = {};
+      // Reset to all buildings when clearing filters
+      state.filteredBuildings = state.buildings;
+    },
+    
+    clearError: (state) => {
+      state.error = null;
+    },
+    
+    resetBuildingsState: (state) => {
+      state.buildings = [];
+      state.filteredBuildings = [];
+      state.selectedBuilding = null;
+      state.loading = false;
+      state.error = null;
       state.searchParams = {};
     },
   },
@@ -140,7 +159,8 @@ export const buildingsSlice = createSlice({
       })
       .addCase(searchBuildings.fulfilled, (state, action) => {
         state.loading = false;
-        state.filteredBuildings = action.payload.data.jReitBuildings;
+        const data = action.payload.data as { jReitBuildings?: JReitBuilding[]; results?: JReitBuilding[] };
+        state.filteredBuildings = data.jReitBuildings || data.results || [];
         state.searchParams = action.payload.params;
       })
       .addCase(searchBuildings.rejected, (state, action) => {
@@ -152,7 +172,11 @@ export const buildingsSlice = createSlice({
 
 export const {
   setSelectedBuilding,
+  clearSelectedBuilding,
+  setSearchParams,
   clearSearchFilters,
+  clearError,
+  resetBuildingsState,
 } = buildingsSlice.actions;
 
 export default buildingsSlice.reducer; 

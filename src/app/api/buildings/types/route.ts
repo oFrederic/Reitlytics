@@ -1,6 +1,8 @@
 import buildings from '@/mocks/buildings.json';
 import type { JReitData } from '@/mocks/buildings.type';
 import { errorHandlers, createSuccessResponse } from '../../utils/error-handler';
+import { validateAssetType } from '@/lib/validation/schemas';
+import { logError } from '@/utils/errors';
 
 // Define the structure of the buildings.json file
 interface BuildingsFile {
@@ -19,22 +21,11 @@ export async function GET(request: Request) {
     }
     
     // Validate asset type
-    const validAssetTypes = [
-      'office', 
-      'retail', 
-      'hotel', 
-      'parking', 
-      'industrial', 
-      'logistic', 
-      'residential', 
-      'healthCare', 
-      'other'
-    ];
-    
-    if (!validAssetTypes.includes(assetType)) {
+    const validation = validateAssetType(assetType);
+    if (!validation.isValid) {
       return errorHandlers.validationError(
-        'Invalid asset type', 
-        { assetType, validTypes: validAssetTypes }
+        'Invalid asset type',
+        { errors: validation.errors }
       );
     }
     
@@ -50,7 +41,12 @@ export async function GET(request: Request) {
       assetType
     });
   } catch (error) {
-    console.error('Error fetching buildings by type:', error);
+    logError(error as Error, { 
+      endpoint: '/api/buildings/types',
+      method: 'GET',
+      assetType: new URL(request.url).searchParams.get('type')
+    });
+    
     return errorHandlers.internalError(
       'Failed to fetch buildings by type',
       { error: error instanceof Error ? error.message : String(error) }

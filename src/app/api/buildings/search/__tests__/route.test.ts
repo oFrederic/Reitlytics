@@ -31,7 +31,7 @@ describe('Building Search API Route', () => {
     expect(data.data.count).toBe(2);
     
     // Should match both Tokyo-related buildings (Test Building 1 and Shibuya Mall)
-    const ids = data.data.results.map((b: any) => b.id).sort();
+    const ids = data.data.results.map((b: { id: string }) => b.id).sort();
     expect(ids).toEqual(['test-id-1', 'test-id-3'].sort());
   });
   

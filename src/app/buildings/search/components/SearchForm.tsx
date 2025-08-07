@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import styles from './SearchForm.module.css';
 import { useAppSelector, useAppDispatch } from '@/redux/store';
-import { searchBuildings, clearSearchFilters, BuildingSearchParams } from '@/redux/slices/buildingsSlice';
+import { searchBuildings, clearSearchFilters } from '@/redux/slices/buildingsSlice';
 
 interface SearchFormProps {
   onSearch: (filters: SearchFilters) => void;

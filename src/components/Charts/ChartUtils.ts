@@ -1,55 +1,27 @@
 /**
- * Common Types for Chart Components
+ * Chart utilities and helper functions
+ * 
+ * Shared utilities for chart components including time filtering,
+ * data granularity analysis, and formatting functions.
  */
 
-// Shared time filter options
-export enum TimeFilterOption {
-  Month = '1month',
-  Quarter = '3months',
-  Halfyear = '6months',
-  Year = '1year'
-}
+import { TIME_FILTERS, CHART_COLORS, CHART_CONFIG, FILTER_STYLES } from '@/constants/charts';
+import type { TimeFilterOption, DataGranularity } from '@/types/charts';
 
-export const TIME_FILTER_LABELS: Record<TimeFilterOption, string> = {
-  [TimeFilterOption.Month]: '1ヶ月',
-  [TimeFilterOption.Quarter]: '4半期',
-  [TimeFilterOption.Halfyear]: '半期',
-  [TimeFilterOption.Year]: '1年'
-};
+// Re-export types for backward compatibility
+export type { TimeFilterOption, DataGranularity } from '@/types/charts';
 
-// Data granularity status
-export interface DataGranularity {
-  minIntervalMonths: number;
-  isMonthlyAvailable: boolean;
-  isQuarterlyAvailable: boolean;
-  isHalfYearlyAvailable: boolean;
-}
+// Re-export constants
+export { CHART_COLORS, FILTER_STYLES };
 
-// Chart theme constants
-export const CHART_COLORS = {
-  capRate: '#4F46E5',
-  occupancyRate: '#3B82F6',
-  grid: '#e0e0e0',
-  text: '#666666',
-  warning: {
-    text: '#9a3412',
-    bg: '#ffedd5',
-    border: '#fed7aa'
-  }
-};
-
-export const FILTER_STYLES = {
-  active: 'bg-blue-500 text-white',
-  inactive: 'bg-gray-200',
-  disabled: 'bg-gray-100 text-gray-400 cursor-not-allowed'
-};
-
-// Minimum interval thresholds (in months)
-export const GRANULARITY_THRESHOLDS = {
-  monthly: 1.1,     // Allow a little buffer for month-to-month data
-  quarterly: 3.1,   // Allow a little buffer for quarterly data
-  halfYearly: 6.1   // Allow a little buffer for half-yearly data
-};
+// Time filter labels mapping
+export const TIME_FILTER_LABELS: Record<string, string> = Object.entries(TIME_FILTERS).reduce(
+  (acc, [, config]) => {
+    acc[config.value] = config.label;
+    return acc;
+  },
+  {} as Record<string, string>
+);
 
 /**
  * Utility Functions
@@ -63,12 +35,12 @@ export const formatDateForDisplay = (date: Date, filter: TimeFilterOption): stri
   
   // Format based on the time filter
   switch (filter) {
-    case TimeFilterOption.Month:
+    case TIME_FILTERS.MONTH.value:
       return `${year}/${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')}`;
-    case TimeFilterOption.Quarter:
-    case TimeFilterOption.Halfyear:
+    case TIME_FILTERS.QUARTER.value:
+    case TIME_FILTERS.HALFYEAR.value:
       return `${year}/${month.toString().padStart(2, '0')}`;
-    case TimeFilterOption.Year:
+    case TIME_FILTERS.YEAR.value:
     default:
       return `${year}`;
   }
@@ -85,32 +57,27 @@ export const calculateMonthsBetween = (date1: Date, date2: Date): number => {
 
 // Check if a filter option should be accessible based on data granularity
 export const isFilterAvailable = (filter: TimeFilterOption, minInterval: number): boolean => {
-  switch (filter) {
-    case TimeFilterOption.Month:
-      return minInterval <= GRANULARITY_THRESHOLDS.monthly;
-    case TimeFilterOption.Quarter:
-      return minInterval <= GRANULARITY_THRESHOLDS.quarterly;
-    case TimeFilterOption.Halfyear:
-      return minInterval <= GRANULARITY_THRESHOLDS.halfYearly;
-    case TimeFilterOption.Year:
-      return true; // Year is always available
-    default:
-      return false;
-  }
+  const timeFilterConfig = Object.values(TIME_FILTERS).find(config => config.value === filter);
+  if (!timeFilterConfig) return false;
+  
+  // Year is always available
+  if (filter === TIME_FILTERS.YEAR.value) return true;
+  
+  return minInterval <= timeFilterConfig.thresholdMonths;
 };
 
 // Get time grouping key for a date based on selected filter
 export const getTimeGroupKey = (date: Date, timeFilter: TimeFilterOption): string => {
   switch (timeFilter) {
-    case TimeFilterOption.Month:
+    case TIME_FILTERS.MONTH.value:
       return `${date.getFullYear()}-${date.getMonth() + 1}`;
-    case TimeFilterOption.Quarter:
+    case TIME_FILTERS.QUARTER.value:
       const quarter = Math.floor(date.getMonth() / 3) + 1;
       return `${date.getFullYear()}-Q${quarter}`;
-    case TimeFilterOption.Halfyear:
+    case TIME_FILTERS.HALFYEAR.value:
       const half = Math.floor(date.getMonth() / 6) + 1;
       return `${date.getFullYear()}-H${half}`;
-    case TimeFilterOption.Year:
+    case TIME_FILTERS.YEAR.value:
     default:
       return `${date.getFullYear()}`;
   }
@@ -126,19 +93,19 @@ export const createDefaultDataGranularity = (): DataGranularity => ({
 
 // Calculate appropriate time filter based on data granularity
 export const calculateInitialTimeFilter = (dataGranularity: DataGranularity): TimeFilterOption => {
-  if (dataGranularity.isMonthlyAvailable) return TimeFilterOption.Month;
-  if (dataGranularity.isQuarterlyAvailable) return TimeFilterOption.Quarter;
-  if (dataGranularity.isHalfYearlyAvailable) return TimeFilterOption.Halfyear;
-  return TimeFilterOption.Year;
+  if (dataGranularity.isMonthlyAvailable) return TIME_FILTERS.MONTH.value as TimeFilterOption;
+  if (dataGranularity.isQuarterlyAvailable) return TIME_FILTERS.QUARTER.value as TimeFilterOption;
+  if (dataGranularity.isHalfYearlyAvailable) return TIME_FILTERS.HALFYEAR.value as TimeFilterOption;
+  return TIME_FILTERS.YEAR.value as TimeFilterOption;
 };
 
 // Calculate whether scrolling is needed based on data length
 export const calculateChartWidth = (dataLength: number, needsScrolling: boolean): string | number => {
-  const minWidth = Math.max(dataLength * 60, 800);
+  const minWidth = Math.max(dataLength * CHART_CONFIG.DATA_POINT_WIDTH, CHART_CONFIG.MIN_CHART_WIDTH);
   return needsScrolling ? minWidth : '100%';
 };
 
-// Standard tooltip styles
+// Standard tooltip styles using chart configuration
 export const TOOLTIP_STYLES = {
   backgroundColor: 'rgba(255, 255, 255, 0.95)',
   border: `1px solid ${CHART_COLORS.grid}`,

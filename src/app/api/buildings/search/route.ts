@@ -1,7 +1,9 @@
 import buildings from '@/mocks/buildings.json';
 import type { JReitData } from '@/mocks/buildings.type';
 import { errorHandlers, createSuccessResponse } from '../../utils/error-handler';
-import { convertYenToMillionYen } from '../../../buildings/search/utils/currencyUtils';
+import { convertYenToMillionYen } from '@/utils/currency';
+import { validateBuildingSearchParams, sanitizeSearchParams } from '@/lib/validation/schemas';
+import { logError } from '@/utils/errors';
 
 // Define the structure of the buildings.json file
 interface BuildingsFile {
@@ -12,14 +14,30 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     
-    // Get filter parameters
-    const query = searchParams.get('q')?.toLowerCase() || '';
-    const minYield = searchParams.get('minYield') || '';
-    const maxYield = searchParams.get('maxYield') || '';
-    const minPrice = searchParams.get('minPrice') || '';
-    const maxPrice = searchParams.get('maxPrice') || '';
-    const minCap = searchParams.get('minCap') || '';
-    const maxCap = searchParams.get('maxCap') || '';
+    // Convert URLSearchParams to plain object
+    const rawParams: Record<string, string> = {};
+    for (const [key, value] of searchParams.entries()) {
+      rawParams[key] = value;
+    }
+    
+    // Validate search parameters
+    const validation = validateBuildingSearchParams(rawParams);
+    if (!validation.isValid) {
+      return errorHandlers.validationError(
+        'Invalid search parameters',
+        { errors: validation.errors }
+      );
+    }
+    
+    // Sanitize and normalize parameters
+    const cleanParams = sanitizeSearchParams(rawParams);
+    const query = cleanParams.q?.toLowerCase() || '';
+    const minYield = cleanParams.minYield || '';
+    const maxYield = cleanParams.maxYield || '';
+    const minPrice = cleanParams.minPrice || '';
+    const maxPrice = cleanParams.maxPrice || '';
+    const minCap = cleanParams.minCap || '';
+    const maxCap = cleanParams.maxCap || '';
     
     const data = (buildings as BuildingsFile).data;
     
@@ -99,7 +117,12 @@ export async function GET(request: Request) {
       }
     });
   } catch (error) {
-    console.error('Error searching buildings:', error);
+    logError(error as Error, { 
+      endpoint: '/api/buildings/search',
+      method: 'GET',
+      url: request.url 
+    });
+    
     return errorHandlers.internalError(
       'Failed to search buildings',
       { error: error instanceof Error ? error.message : String(error) }

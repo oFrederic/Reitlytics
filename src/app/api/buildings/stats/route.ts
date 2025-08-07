@@ -1,6 +1,7 @@
 import buildings from '@/mocks/buildings.json';
 import type { JReitData } from '@/mocks/buildings.type';
 import { errorHandlers, createSuccessResponse } from '../../utils/error-handler';
+import { logError } from '@/utils/errors';
 
 // Define the structure of the buildings.json file
 interface BuildingsFile {
@@ -32,7 +33,11 @@ export async function GET() {
     
     return createSuccessResponse(stats);
   } catch (error) {
-    console.error('Error generating building statistics:', error);
+    logError(error as Error, { 
+      endpoint: '/api/buildings/stats',
+      method: 'GET'
+    });
+    
     return errorHandlers.internalError(
       'Failed to generate building statistics',
       { error: error instanceof Error ? error.message : String(error) }

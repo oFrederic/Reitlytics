@@ -11,11 +11,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import {
-  TimeFilterOption,
   TIME_FILTER_LABELS,
-  DataGranularity,
-  CHART_COLORS,
-  FILTER_STYLES,
   formatDateForDisplay,
   calculateMonthsBetween,
   isFilterAvailable,
@@ -25,6 +21,8 @@ import {
   calculateChartWidth,
   TOOLTIP_STYLES
 } from './ChartUtils';
+import { CHART_COLORS, FILTER_STYLES, TIME_FILTERS } from '@/constants/charts';
+import type { TimeFilterOption, DataGranularity } from '@/types/charts';
 
 /**
  * Type Definitions
@@ -120,10 +118,10 @@ const FilterButtons = memo(({
   <div className="flex justify-center gap-2 text-sm pt-2">
     {Object.entries(TIME_FILTER_LABELS).map(([filter, label]) => {
       const filterOption = filter as TimeFilterOption;
-      const isDisabled = 
-        (filterOption === TimeFilterOption.Month && !dataGranularity.isMonthlyAvailable) ||
-        (filterOption === TimeFilterOption.Quarter && !dataGranularity.isQuarterlyAvailable) ||
-        (filterOption === TimeFilterOption.Halfyear && !dataGranularity.isHalfYearlyAvailable);
+             const isDisabled = 
+         (filterOption === TIME_FILTERS.MONTH.value && !dataGranularity.isMonthlyAvailable) ||
+         (filterOption === TIME_FILTERS.QUARTER.value && !dataGranularity.isQuarterlyAvailable) ||
+         (filterOption === TIME_FILTERS.HALFYEAR.value && !dataGranularity.isHalfYearlyAvailable);
       
       return (
         <FilterButton 
@@ -175,12 +173,12 @@ function CapRateChart({
       minInterval = Math.min(minInterval, interval);
     }
     
-    return {
-      minIntervalMonths: minInterval,
-      isMonthlyAvailable: isFilterAvailable(TimeFilterOption.Month, minInterval),
-      isQuarterlyAvailable: isFilterAvailable(TimeFilterOption.Quarter, minInterval),
-      isHalfYearlyAvailable: isFilterAvailable(TimeFilterOption.Halfyear, minInterval)
-    };
+         return {
+       minIntervalMonths: minInterval,
+       isMonthlyAvailable: isFilterAvailable(TIME_FILTERS.MONTH.value as TimeFilterOption, minInterval),
+       isQuarterlyAvailable: isFilterAvailable(TIME_FILTERS.QUARTER.value as TimeFilterOption, minInterval),
+       isHalfYearlyAvailable: isFilterAvailable(TIME_FILTERS.HALFYEAR.value as TimeFilterOption, minInterval)
+     };
   }, [sortedHistories]);
   
   // Initialize time filter based on data granularity
@@ -191,16 +189,16 @@ function CapRateChart({
   // State for active time filter
   const [timeFilter, setTimeFilter] = useState<TimeFilterOption>(initialTimeFilter);
   
-  // Ensure the selected filter is valid for the data granularity
-  useEffect(() => {
-    if (
-      (timeFilter === TimeFilterOption.Month && !dataGranularity.isMonthlyAvailable) ||
-      (timeFilter === TimeFilterOption.Quarter && !dataGranularity.isQuarterlyAvailable) ||
-      (timeFilter === TimeFilterOption.Halfyear && !dataGranularity.isHalfYearlyAvailable)
-    ) {
-      setTimeFilter(initialTimeFilter);
-    }
-  }, [timeFilter, dataGranularity, initialTimeFilter]);
+     // Ensure the selected filter is valid for the data granularity
+   useEffect(() => {
+     if (
+       (timeFilter === TIME_FILTERS.MONTH.value && !dataGranularity.isMonthlyAvailable) ||
+       (timeFilter === TIME_FILTERS.QUARTER.value && !dataGranularity.isQuarterlyAvailable) ||
+       (timeFilter === TIME_FILTERS.HALFYEAR.value && !dataGranularity.isHalfYearlyAvailable)
+     ) {
+       setTimeFilter(initialTimeFilter);
+     }
+   }, [timeFilter, dataGranularity, initialTimeFilter]);
   
   // Process data for chart display
   const chartData = useMemo(() => {

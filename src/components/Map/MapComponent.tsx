@@ -5,18 +5,13 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { JReitBuilding } from '@/mocks/buildings.type';
 import {
-  MAPBOX_ACCESS_TOKEN,
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_ZOOM,
   DEFAULT_MAP_STYLE,
   MARKER_COLORS
 } from '@/config/mapbox';
-
-// Only set the token if it exists and we're in the browser
-if (typeof window !== 'undefined' && MAPBOX_ACCESS_TOKEN) {
-  console.log('Setting Mapbox token:', MAPBOX_ACCESS_TOKEN ? 'Token exists' : 'No token');
-  mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
-}
+import { MAPBOX_CONFIG } from '@/config/environment';
+import MapUsageMonitor from './MapUsageMonitor';
 
 // Helper function to get building type label
 function getBuildingTypeLabel(assetType: {
@@ -47,8 +42,8 @@ export default function MapComponent({
   buildings = [],
   selectedBuilding = null,
   hoveredBuilding = null,
-  center = DEFAULT_MAP_CENTER,
-  zoom = DEFAULT_MAP_ZOOM,
+  center,
+  zoom,
   onBuildingClick
 }: MapComponentProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -58,9 +53,28 @@ export default function MapComponent({
   const [error, setError] = useState<string | null>(null);
   const prevHoveredBuildingRef = useRef<string | null>(null);
 
+  // Use default values inside the component to avoid accessing at import time
+  const mapCenter = center || DEFAULT_MAP_CENTER;
+  const mapZoom = zoom || DEFAULT_MAP_ZOOM;
+
+  // Get protected Mapbox token
+  const mapboxToken = MAPBOX_CONFIG.ACCESS_TOKEN;
+
   // Initialize map on component mount
   useEffect(() => {
-    if (!MAPBOX_ACCESS_TOKEN) {
+    // Check usage limits first
+    const usageMonitor = (window as { mapboxUsageMonitor?: { incrementUsage: () => boolean } }).mapboxUsageMonitor;
+    if (usageMonitor && !usageMonitor.incrementUsage()) {
+      setError('Map usage limit reached. Please try again later.');
+      return;
+    }
+
+    // Set the Mapbox token when the component mounts
+    if (typeof window !== 'undefined' && mapboxToken) {
+      mapboxgl.accessToken = mapboxToken;
+    }
+
+    if (!mapboxToken) {
       console.error('No Mapbox token available');
       setError('No Mapbox access token provided');
       return;
@@ -69,13 +83,11 @@ export default function MapComponent({
     if (map.current || !mapContainer.current) return;
 
     try {
-      console.log('Initializing map with token:', MAPBOX_ACCESS_TOKEN ? 'Available' : 'Missing');
-      
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: DEFAULT_MAP_STYLE,
-        center,
-        zoom,
+        center: mapCenter,
+        zoom: mapZoom,
       });
 
       map.current.on('load', () => {
@@ -100,7 +112,7 @@ export default function MapComponent({
         map.current = null;
       }
     };
-  }, [center, zoom]);
+  }, [mapCenter, mapZoom, mapboxToken]);
 
   // Helper function to remove all markers
   const clearMarkers = () => {
@@ -133,11 +145,15 @@ export default function MapComponent({
       if (isNaN(longitude) || isNaN(latitude)) return;
       
       // Set color based on building type
-      let markerColor = MARKER_COLORS.other;
-      if (building.assetType.isOffice) markerColor = MARKER_COLORS.office;
-      else if (building.assetType.isRetail) markerColor = MARKER_COLORS.retail;
-      else if (building.assetType.isHotel) markerColor = MARKER_COLORS.hotel;
-      else if (building.assetType.isResidential) markerColor = MARKER_COLORS.residential;
+      let markerColor: string = MARKER_COLORS.isOther;
+      if (building.assetType.isOffice) markerColor = MARKER_COLORS.isOffice;
+      else if (building.assetType.isRetail) markerColor = MARKER_COLORS.isRetail;
+      else if (building.assetType.isHotel) markerColor = MARKER_COLORS.isHotel;
+      else if (building.assetType.isResidential) markerColor = MARKER_COLORS.isResidential;
+      else if (building.assetType.isLogistic) markerColor = MARKER_COLORS.isLogistic;
+      else if (building.assetType.isParking) markerColor = MARKER_COLORS.isParking;
+      else if (building.assetType.isIndustrial) markerColor = MARKER_COLORS.isIndustrial;
+      else if (building.assetType.isHealthCare) markerColor = MARKER_COLORS.isHealthCare; // This is the pink one!
       
       // Determine if this is the selected or hovered building
       const isSelected = selectedBuilding && building.id === selectedBuilding.id;
@@ -454,10 +470,17 @@ export default function MapComponent({
   }
 
   return (
-    <div
-      ref={mapContainer}
-      className="map-container"
-      style={{ width: '100%', height: '100%', minHeight: '400px' }}
-    />
+    <>
+      <MapUsageMonitor 
+        maxRequestsPerHour={500}
+        maxRequestsPerDay={5000}
+        onUsageLimit={() => setError('Map usage limit reached. Please try again later.')}
+      />
+      <div
+        ref={mapContainer}
+        className="map-container"
+        style={{ width: '100%', height: '100%', minHeight: '400px' }}
+      />
+    </>
   );
 } 
